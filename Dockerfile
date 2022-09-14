@@ -4,9 +4,14 @@
 FROM --platform=linux/amd64 ubuntu:18.04
 LABEL org.opencontainers.image.authors=" David Aurelia Ayala Usma <ayala.usma@gmail.com>"
 
-## Making source files available
-RUN mkdir /home/gl_test
-COPY . /home/gl_test
+## Copying files into container
+RUN mkdir -p /home/gl_test
+RUN mkdir -p /home/gl_test/datasets
+RUN mkdir -p /home/gl_test/src
+COPY datasets/ /home/gl_test/datasets
+COPY src/ /home/gl_test/src
+COPY prs_workflow_exec.sh /home/gl_test
+COPY requirements.txt /home/gl_test
 
 ## Installing dependencies
 RUN DEBIAN_FRONTEND=noninteractive apt-get update
@@ -15,3 +20,6 @@ RUN DEBIAN_FRONTEND=noninteractive update-alternatives --install /usr/bin/python
 RUN DEBIAN_FRONTEND=noninteractive update-alternatives --config python3
 RUN python3 -m pip install --upgrade pip
 RUN pip3 install -r /home/gl_test/requirements.txt
+
+## Running the entire workflow
+CMD bash /home/gl_test/prs_workflow_exec.sh

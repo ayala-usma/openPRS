@@ -1,4 +1,4 @@
-#!/usr/bin/env python3
+#!/usr/bin/python3
 # -*- coding: utf-8 -*-
 #----------------------------------------------------------------------------
 # Created By: David Aurelia Ayala Usma
@@ -123,4 +123,4 @@ if __name__ == '__main__':
     results.to_csv(args.out, index=False)
     
     t_prs_end = timer()
-    print("[{timestamp}]: Testing finished, bye! ----- Runtime of the workflow in testing mode (s): {time}".format(timestamp=datetime.now(), time=(t_prs_end - t_prs_start)))
+    print("[{timestamp}]: Script-mode execution finished, bye! ----- Runtime of the workflow in script mode (s): {time}".format(timestamp=datetime.now(), time=(t_prs_end - t_prs_start)))
