@@ -15,11 +15,11 @@ import os
 import sys
 import numpy as np
 import requests as rq
-from snps import SNPs
 import flatten_json as fj
+from pandas import read_csv as rcsv #Avoid dtype conflict in modin
 
 ## Parallelized pandas
-os.environ["MODIN_ENGINE"] = "dask"
+os.environ["MODIN_ENGINE"] = "ray"
 import modin.pandas as pd
 
 # ---------------------------------------------------------------------------
@@ -52,8 +52,8 @@ def api_request(url):
         print("ERROR: status code = " + str(r.status_code))
         return None
 
-## Recovering the reference allele of the genotyped variant
-def get_reference_allele_api(snp_id):
+## Recovering the major (non-effect) allele of the genotyped variant
+def get_major_allele_api(snp_id):
     var_dict = api_request(REFSNP_API.format(snp_id=snp_id)).json()
     allele_freqs = {}
 
@@ -73,9 +73,16 @@ def get_reference_allele_api(snp_id):
 ## Recovering the genotype dataset from a given individual
 def get_genotype_individual(user_id):
     if(user_id != None):
-        raw_data = api_request(OPENSNP_API.format(user_id=user_id))
-        indiv_snps = SNPs(raw_data.content)
-        genotype = pd.DataFrame(indiv_snps.snps.reset_index())
+        print("Retrieval of genotype of user: {user_id} started!".format(user_id=user_id))
+        if('ancestry' in user_id):
+            genotype = rcsv(OPENSNP_API.format(user_id=user_id), comment='#', sep='\t', low_memory=False)
+            genotype['genotype'] = genotype['allele1'].astype(str) + genotype['allele2'].astype(str)
+        else:
+            genotype = rcsv(OPENSNP_API.format(user_id=user_id), comment='#', sep='\t', header=None, low_memory=False)
+            genotype.columns = ['rsid', 'chromosome', 'position', 'genotype']
+        
+        print("Retrieval of genotype of user: {user_id} finished!".format(user_id=user_id))
+        genotype = pd.DataFrame(genotype)
     return genotype
 
 ## Extracting the genotyped alleles from each individual for the PRS
@@ -83,25 +90,25 @@ def get_genotyped_alleles_individual(user_genotype, model_table):
     merged_df = user_genotype.merge(model_table,left_on='rsid', right_on='snp_id', how='inner')
     return merged_df
 
-## Takes a model table and extracts the 
-def assign_reference_allele(snp_entry):
+## Takes a model table and extracts the major (non-effect) allele of a given SNP
+def assign_major_allele(snp_entry):
     snp_id = snp_entry['snp_id'].replace(r'rs', '')
-    ref_allele = get_reference_allele_api(snp_id)
+    ref_allele = get_major_allele_api(snp_id)
     return ref_allele
 
 ## Get minor allele dosage
 def get_minor_allele_dosage(snp_entry):
-    reference_allele = snp_entry['reference_allele']
+    major_allele = snp_entry['major_allele']
     genotype = snp_entry['genotype']
-    dosage = 2 - genotype.count(reference_allele)
+    dosage = len(genotype) - genotype.count(major_allele)
     return dosage
 
-## Obtaining the reference (no-effect) allele
-def get_reference_alleles_model(model_table):
-    model_table['reference_allele'] = model_table.apply(lambda x: assign_reference_allele(x), axis=1)
+## Obtaining the major (no-effect) allele
+def get_major_alleles_model(model_table):
+    model_table['major_allele'] = model_table.apply(lambda x: assign_major_allele(x), axis=1)
     return model_table
 
-## Attaching the reference (no-effect) allele and the dosage of the minor (effect) allele
+## Attaching the major (no-effect) allele and the dosage of the minor (effect) allele
 def merge_allelic_data(user_genotype, model_table):
     final_genotype_individual = get_genotyped_alleles_individual(user_genotype, model_table)
     final_genotype_individual['minor_allele_dosage'] = final_genotype_individual.apply(lambda x: get_minor_allele_dosage(x), axis=1)
@@ -121,7 +128,7 @@ def individual_prs(individual_code, model_table):
     print("SNPs of the individual retrieved!")
     model_data = pd.read_csv(model_table, sep='\t')
     print("PRS model coefficients retrieved!")
-    model_data = get_reference_alleles_model(model_data)
+    model_data = get_major_alleles_model(model_data)
     print("Non-effect alleles retrieved!")
     geno_indiv_model = merge_allelic_data(individual_data, model_data)
     print("Relevant genotypes for the PRS extracted!")
@@ -131,4 +138,6 @@ def individual_prs(individual_code, model_table):
 # ---------------------------------------------------------------------------
 ## Boilerplate for command line execution of main function for testing
 if __name__ == '__main__':
-    individual_prs('11008.23andme.9131', '{base_dir}/datasets/model_a.tsv'.format(base_dir=BASE_DIR))
+    import ray
+    ray.init(runtime_env={'env_vars': {'__MODIN_AUTOIMPORT_PANDAS__': '1'}})
+    individual_prs('10787.ancestry.8931', '{base_dir}/datasets/model_a.tsv'.format(base_dir=BASE_DIR))
