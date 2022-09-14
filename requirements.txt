@@ -1,11 +1,11 @@
 numpy
 pandas
 six
-distributed
-dask
+botocore
+ray
 git+https://github.com/modin-project/modin
-snps
 seaborn
 requests
 statsmodels
 flatten_json
+argparse

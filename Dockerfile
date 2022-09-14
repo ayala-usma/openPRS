@@ -1,7 +1,7 @@
 ## NOTE: Running this container this way  docker run -it <name> bash
 
-## Using the base Ubuntu 18.04 image
-FROM ubuntu:18.04
+## Using the base Ubuntu 18.04 image. This image uses the amd64 architecture for the binaries that is somewhat slower in Mac ARM chips
+FROM --platform=linux/amd64 ubuntu:18.04
 LABEL org.opencontainers.image.authors=" David Aurelia Ayala Usma <ayala.usma@gmail.com>"
 
 ## Making source files available
