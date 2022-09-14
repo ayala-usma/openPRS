@@ -13,12 +13,14 @@
 ## Required libraries
 import os
 import sys
+import ray
 import numpy as np
 import requests as rq
 import flatten_json as fj
 from pandas import read_csv as rcsv #Avoid dtype conflict in modin
 
 ## Parallelized pandas
+#ray.init(_plasma_directory = '/tmp')
 os.environ["MODIN_ENGINE"] = "ray"
 import modin.pandas as pd
 
@@ -110,6 +112,9 @@ def get_major_alleles_model(model_table):
 
 ## Attaching the major (no-effect) allele and the dosage of the minor (effect) allele
 def merge_allelic_data(user_genotype, model_table):
+    if(type(user_genotype) != type(model_table)):
+        user_genotype = pd.DataFrame(user_genotype)
+        model_table = pd.DataFrame(model_table)
     final_genotype_individual = get_genotyped_alleles_individual(user_genotype, model_table)
     final_genotype_individual['minor_allele_dosage'] = final_genotype_individual.apply(lambda x: get_minor_allele_dosage(x), axis=1)
     return final_genotype_individual
@@ -138,6 +143,5 @@ def individual_prs(individual_code, model_table):
 # ---------------------------------------------------------------------------
 ## Boilerplate for command line execution of main function for testing
 if __name__ == '__main__':
-    import ray
-    ray.init(runtime_env={'env_vars': {'__MODIN_AUTOIMPORT_PANDAS__': '1'}})
+    ray.init()
     individual_prs('10787.ancestry.8931', '{base_dir}/datasets/model_a.tsv'.format(base_dir=BASE_DIR))
