@@ -95,8 +95,9 @@ def get_genotyped_alleles_individual(user_genotype, model_table):
 ## Takes a model table and extracts the major (non-effect) allele of a given SNP
 def assign_major_allele(snp_entry):
     snp_id = snp_entry['snp_id'].replace(r'rs', '')
-    ref_allele = get_major_allele_api(snp_id)
-    return ref_allele
+    major_allele = get_major_allele_api(snp_id)
+    print("Major (non-effect) allele for variant {snp} successfully retrieved".format(snp=snp_entry['snp_id']))
+    return major_allele
 
 ## Get minor allele dosage
 def get_minor_allele_dosage(snp_entry):

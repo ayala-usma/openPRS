@@ -11,7 +11,6 @@ COPY . /home/gl_test
 ## Installing dependencies
 RUN DEBIAN_FRONTEND=noninteractive apt-get update
 RUN DEBIAN_FRONTEND=noninteractive apt-get -y install htop python3.8-minimal python3-pip git
-
 RUN DEBIAN_FRONTEND=noninteractive update-alternatives --install /usr/bin/python3 python3 /usr/bin/python3.8 1
 RUN DEBIAN_FRONTEND=noninteractive update-alternatives --config python3
 RUN python3 -m pip install --upgrade pip

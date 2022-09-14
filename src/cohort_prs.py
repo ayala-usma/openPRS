@@ -12,7 +12,6 @@
 # ---------------------------------------------------------------------------
 ## Required libraries
 import os
-import sys
 import argparse
 import numpy as np
 import requests as rq
@@ -23,7 +22,6 @@ from timeit import default_timer as timer
 os.environ["MODIN_ENGINE"] = "ray"
 import ray
 ray.init()
-#ray.init(_plasma_directory = '/tmp')
 import modin.pandas as pd
 
 # ---------------------------------------------------------------------------
@@ -31,20 +29,23 @@ import modin.pandas as pd
 import individual_prs as prs
 
 # ---------------------------------------------------------------------------
-## Main function
-
-def main():
-
-    ## Parsing command line arguments
-    parser = argparse.ArgumentParser(description='This package calculates the PRS scores for a condition in different individuals under different provided models. It also summarizes the data for analysis.')
-    parser.add_argument('user_data', type=str, nargs=1,
+## Argument parser
+parser = argparse.ArgumentParser(description='This package calculates the PRS scores for a condition in different individuals under different provided models. It also summarizes the data for analysis.')
+parser.add_argument('user_data', type=str, nargs=1,
                     help="""File containing a table with two columns. The first column describes presence or absence of the condition in an individual. 
                       The second one is an OpenSNP file id that references the genotype of an individual for download.""")
-    parser.add_argument('prs_model', type=str, nargs='+',
+parser.add_argument('prs_model', type=str, nargs='+',
                     help="""File containing a table with two columns describing the PRS model coefficients. The first column contains the variants identifiers (rsIDs) considered in the model. 
                     The second column contains the weights (beta coefficients) of each variant. Multiple models can be specified.""")
+parser.add_argument('--out', type=str, default='cohort_prs_out.csv',
+                    help="""Name of the output DataFrame. (Default: cohort_prs_out.csv)""")
     
-    args = parser.parse_args()
+args = parser.parse_args()
+
+# ---------------------------------------------------------------------------
+## Main function
+
+def main(args):
     
     ## Reading the PRS models data 
     t_start = timer()
@@ -108,6 +109,8 @@ def main():
     t_end = timer()
     print("[{timestamp}]: PRSs of the cohort for all models successfully calculated! ----- Time elapsed (s): {time}".format(timestamp=datetime.now(), time=(t_end - t_step)))
 
+    t_end = timer()
+    print("[{timestamp}]: Workflow finished, bye! ----- Runtime of the entire workflow (s): {time}".format(timestamp=datetime.now(), time=(t_end - t_start)))
     return indiv_data
 
 # ---------------------------------------------------------------------------
@@ -115,6 +118,9 @@ def main():
 if __name__ == '__main__':
     t_prs_start = timer()
     print("[{timestamp}]: Cohort PRS calculator started!!!".format(timestamp=datetime.now()))
-    main()
+    
+    results = main(args)
+    results.to_csv(args.out, index=False)
+    
     t_prs_end = timer()
-    print("[{timestamp}]: Workflow finished, bye! ----- Runtime of the workflow(s): {time}".format(timestamp=datetime.now(), time=(t_prs_end - t_prs_start)))
+    print("[{timestamp}]: Testing finished, bye! ----- Runtime of the workflow in testing mode (s): {time}".format(timestamp=datetime.now(), time=(t_prs_end - t_prs_start)))
