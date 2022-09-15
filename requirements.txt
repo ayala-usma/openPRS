@@ -5,8 +5,6 @@ botocore
 git+https://github.com/modin-project/modin@0.15.0
 protobuf == 3.20.0
 ray[default] == 1.9
-seaborn
 requests
-statsmodels
 flatten_json
 argparse
